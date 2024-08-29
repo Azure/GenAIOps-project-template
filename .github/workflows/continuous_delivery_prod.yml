@@ -8,7 +8,7 @@ on:
       
 jobs:
   setup-env-job:
-    if: ${{ github.repository != 'Azure/llmops-project-template' }} && 
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }} && 
         github.event.pull_request.merged == true && 
         startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
@@ -61,7 +61,7 @@ jobs:
           AZURE_STORAGE_ACCOUNT_NAME: ${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}
 
   integration-testing:
-    if: ${{ github.repository != 'Azure/llmops-project-template' }}    
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}    
     runs-on: ubuntu-latest
     environment: prod
     needs: [setup-env-job]

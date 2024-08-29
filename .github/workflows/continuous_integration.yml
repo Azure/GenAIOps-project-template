@@ -12,7 +12,7 @@ on:
 jobs:
 
   unit-testing:
-    if: ${{ github.repository != 'Azure/llmops-project-template' }}    
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}    
     runs-on: ubuntu-latest
     environment: dev
     steps:       
@@ -47,7 +47,7 @@ jobs:
           echo "Run Pylint"
 
   setup-env-job:
-    if: ${{ github.repository != 'Azure/llmops-project-template' }}
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}
     needs: [unit-testing, code-standard-check]        
     runs-on: ubuntu-latest
     environment: dev

@@ -9,7 +9,7 @@ on:
 jobs:
 
   setup-env-job:
-    if: ${{ github.repository != 'Azure/llmops-project-template' && github.event.workflow_run.conclusion == 'success' }}        
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' && github.event.workflow_run.conclusion == 'success' }}        
     runs-on: ubuntu-latest
     environment: dev
     outputs:
@@ -60,7 +60,7 @@ jobs:
           AZURE_STORAGE_ACCOUNT_NAME: ${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}
 
   deploy-flow:
-    if: ${{ github.repository != 'Azure/llmops-project-template' && github.event.workflow_run.conclusion == 'success' }}   
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' && github.event.workflow_run.conclusion == 'success' }}   
     runs-on: ubuntu-latest
     needs: [setup-env-job] 
     environment: dev

@@ -8,7 +8,7 @@ on:
 jobs:
 
   setup-env-job:
-    if: ${{ github.repository != 'Azure/llmops-project-template' }}        
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}        
     runs-on: ubuntu-latest
     environment: qa
     outputs:
