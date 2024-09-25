@@ -48,11 +48,6 @@ Make sure to reference any documents used in the response.
 # question
 {{question}}
 
-# Instructions
-Reference other items purchased specifically by name and description that 
-would go well with the items found above. Be brief and concise and use appropriate emojis.
-
-
 {% for item in history %}
 {{item.role}}:
 {{item.content}}
