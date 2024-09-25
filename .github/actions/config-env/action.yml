@@ -83,8 +83,9 @@ runs:
           "AZURE_OPENAI_EMBEDDING_DEPLOYMENT" 
           "AZURE_OPENAI_EMBEDDING_MODEL"
           "AZURE_OPENAI_ENDPOINT" 
-          "AZURE_OPENAI_NAME" 
-          "AZURE_PRINCIPAL_ID" 
+          "AZURE_OPENAI_NAME"
+          "AZURE_PRINCIPAL_ID"
+          "AZURE_PRINCIPAL_TYPE" 
           "AZURE_RESOURCE_GROUP"
           "AZURE_SEARCH_ENDPOINT" 
           "LOAD_AZURE_SEARCH_SAMPLE_DATA"
@@ -103,7 +104,6 @@ runs:
             echo "$VAR=$VALUE_GHAENV"
             export $VAR=$VALUE            
           done
-
         else
           # Initialize azd
           export AZURE_SUBSCRIPTION_ID="${{ inputs.AZURE_SUBSCRIPTION_ID }}"
@@ -122,18 +122,11 @@ runs:
             echo "🔶 | Previous deployment exists." 
             deployment_exists=true
           fi
-          
-          # Define azd deployAppService parameter
-          export AZURE_DEPLOY_APP_SERVICE=${{ inputs.AZURE_DEPLOY_APP_SERVICE }}
-          [ -n "$AZURE_DEPLOY_APP_SERVICE" ] && echo 'AZURE_DEPLOY_APP_SERVICE is ${AZURE_DEPLOY_APP_SERVICE}' || echo 'AZURE_DEPLOY_APP_SERVICE is empty defaulting to true'
-          [ -n "$AZURE_DEPLOY_APP_SERVICE" ] && azd env set AZURE_DEPLOY_APP_SERVICE ${AZURE_DEPLOY_APP_SERVICE} || azd env set AZURE_DEPLOY_APP_SERVICE true
-          
-          # Define azd principalType parameter
-          azd env set AZURE_PRINCIPAL_TYPE 'ServicePrincipal'
-
+        
           # Checking if previous deployment exists
           if [  "$deployment_exists" = false ]; then
             echo "Provisioning environment..." 
+            azd env set AZURE_PRINCIPAL_TYPE 'ServicePrincipal'    
             azd provision --no-prompt
           fi
 
@@ -169,22 +162,33 @@ runs:
           # Set environment variables and update AZD variables 
           
           for VAR in "${VARIABLES[@]}"; do
-            VALUE_OUTPUT=$(azd env get-values -e ${{ inputs.AZURE_ENV_NAME }} | grep $VAR | cut -d'=' -f2 | tr -d '"' || true)
-            VALUE_GHAENV=$(eval echo \${$VAR})
-            [ -n "$VALUE_GHAENV" ] && VALUE=$VALUE_GHAENV || VALUE=$VALUE_OUTPUT
-            [ -n "$VALUE" ] && [ "$VALUE" != "$VALUE_OUTPUT" ] && azd env set $VAR $VALUE
-            echo "$VAR=$VALUE" >> "$GITHUB_OUTPUT"
-            echo "$VAR=$VALUE"
-            export $VAR=$VALUE            
-          done
+              # Retrieve value from Azure environment
+              VALUE_OUTPUT=$(azd env get-values -e "$AZURE_ENV_NAME" | grep $VAR | cut -d'=' -f2 | tr -d '"' || true)
+              # Retrieve the current value in the GitHub environment
+              VALUE_GHAENV=$(eval echo \${$VAR})
+              # Determine which value to use (GitHub Actions env value or Azure env value)
+              if [ -n "$VALUE_GHAENV" ]; then
+                  VALUE=$VALUE_GHAENV
+                  SOURCE="GitHub Actions environment"
+              else
+                  VALUE=$VALUE_OUTPUT
+                  SOURCE="Azure environment"
+              fi
 
-          # Define azd deployAppService parameter
-          export AZURE_DEPLOY_APP_SERVICE=${{ inputs.AZURE_DEPLOY_APP_SERVICE }}
-          [ -n "$AZURE_DEPLOY_APP_SERVICE" ] && echo 'AZURE_DEPLOY_APP_SERVICE is ${AZURE_DEPLOY_APP_SERVICE}' || echo 'AZURE_DEPLOY_APP_SERVICE is empty defaulting to true'
-          [ -n "$AZURE_DEPLOY_APP_SERVICE" ] && azd env set AZURE_DEPLOY_APP_SERVICE ${AZURE_DEPLOY_APP_SERVICE} || azd env set AZURE_DEPLOY_APP_SERVICE true
-          
-          # Define azd principalType parameter
-          azd env set AZURE_PRINCIPAL_TYPE 'ServicePrincipal'
+              if [ "$VAR" == "AZURE_PRINCIPAL_TYPE" ]; then
+                  VALUE='ServicePrincipal'
+                  SOURCE="Hard-coded"
+              fi
+
+              # Update the Azure environment if needed
+              if [ -n "$VALUE" ] && [ "$VALUE" != "$VALUE_OUTPUT" ]; then
+                  echo "Updating $VAR in Azure environment..."
+                  azd env set $VAR $VALUE
+              fi
+              # Export the variable to the current environment
+              export $VAR=$VALUE
+              echo "$VAR: $VALUE (from $SOURCE)"
+          done
 
           # Previous deployment exists. Update provisioned resources in case template has changed.
           if [  "$deployment_exists" = true ]; then
@@ -196,14 +200,28 @@ runs:
         # Updating azd environment variables after provisioning
 
         for VAR in "${VARIABLES[@]}"; do
-          VALUE_OUTPUT=$(azd env get-values -e ${{ inputs.AZURE_ENV_NAME }} | grep $VAR | cut -d'=' -f2 | tr -d '"' || true)
-          VALUE_GHAENV=$(eval echo \${$VAR})
-          [ -n "$VALUE_GHAENV" ] && VALUE=$VALUE_GHAENV || VALUE=$VALUE_OUTPUT
-          [ -n "$VALUE" ] && [ "$VALUE" != "$VALUE_OUTPUT" ] && azd env set $VAR $VALUE
-          echo "$VAR=$VALUE" >> "$GITHUB_OUTPUT"
-          echo "$VAR=$VALUE"
-          export $VAR=$VALUE            
-        done 
+            # Retrieve value from Azure environment
+            VALUE_OUTPUT=$(azd env get-values -e "$AZURE_ENV_NAME" | grep $VAR | cut -d'=' -f2 | tr -d '"' || true)
+            # Retrieve the current value in the GitHub environment
+            VALUE_GHAENV=$(eval echo \${$VAR})
+            # Determine which value to use (GitHub Actions env value or Azure env value)
+            if [ -n "$VALUE_GHAENV" ]; then
+                VALUE=$VALUE_GHAENV
+                SOURCE="GitHub Actions environment"
+            else
+                VALUE=$VALUE_OUTPUT
+                SOURCE="Azure environment"
+            fi
+
+            if [ "$VAR" == "AZURE_PRINCIPAL_TYPE" ]; then
+                VALUE='ServicePrincipal'
+                SOURCE="Hard-coded"
+            fi
+
+            # Export the variable to the current environment
+            export $VAR=$VALUE
+            echo "$VAR: $VALUE (from $SOURCE)"
+        done
 
         # Load sample data if needed
 
@@ -268,6 +286,9 @@ outputs:
   AZURE_PRINCIPAL_ID:
     description: 'Azure Principal ID'
     value: ${{ steps.setup-env-step.outputs.AZURE_PRINCIPAL_ID }}
+  AZURE_PRINCIPAL_TYPE:
+    description: 'Azure Principal Type'
+    value: ${{ steps.setup-env-step.outputs.AZURE_PRINCIPAL_TYPE }}    
   AZURE_RESOURCE_GROUP:
     description: 'Azure resource group'
     value: ${{ steps.setup-env-step.outputs.AZURE_RESOURCE_GROUP }}

@@ -280,6 +280,7 @@ output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_PRINCIPAL_ID string = principalId
+output AZURE_PRINCIPAL_TYPE string = principalType
 
 output AZURE_OPENAI_ENDPOINT string = ai.outputs.openAiEndpoint
 output AZURE_OPENAI_API_VERSION string = oaiApiVersion
