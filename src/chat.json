@@ -1,11 +1,10 @@
 {
   "documents": {
-    "id": "1",
-    "title": "Lunar Exploration Guide",
-    "name": "Lunar Exploration Guide",
-    "description": "Explore the moon's wonders with our Lunar Exploration Guide! Covering ancient craters, the Mare Frigoris, and more, learn about lunar phases, its impact on Earth, and the history of moon exploration. Discover astronaut technology and future lunar missions. This guide is packed with maps, photos, and facts for lunar enthusiasts.",
-    "content": "The moon's surface is a fascinating landscape marked by vast plains called 'maria', numerous craters, and rugged highlands. The maria, Latin for 'seas', are large, dark basaltic plains formed by ancient volcanic eruptions, while the craters resulted from collisions with asteroids and comets. The highlands, or 'terrae', are lighter areas that rise above the maria, consisting of anorthosite, a type of lunar rock. This diverse topography offers insights into the moon's geological history and the solar system's early years.",
+    "id": "16",
+    "title": "Medical Record Access Policy",
+    "content": "Patients have the right to access their medical records. Records can be viewed online via our secure patient portal or requested in paper form.",
+    "url": "https://lamnahealthcare.com/medical-records"
   },
-  "question": "tell me about the moon's surface", 
+  "question": "How can I access my medical records?", 
   "chat_history": []
 }

@@ -2,7 +2,6 @@ import os
 import json
 from datetime import datetime
 
-from azure.identity import DefaultAzureCredential
 from promptflow.client import PFClient
 from promptflow.core import AzureOpenAIModelConfiguration
 from promptflow.evals.evaluate import evaluate

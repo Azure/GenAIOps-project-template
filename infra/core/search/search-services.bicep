@@ -34,7 +34,7 @@ param replicaCount int = 1
   'free'
   'standard'
 ])
-param semanticSearch string = 'disabled'
+param semanticSearch string = 'free'
 
 var searchIdentityProvider = (sku.name == 'free') ? null : {
   type: 'SystemAssigned'

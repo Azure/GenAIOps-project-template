@@ -20,9 +20,6 @@ inputs:
   MANUAL_PROVISIONING:
     description: 'Will not provision the environment if value is true, default is false'
     required: true
-  AZURE_DEPLOY_APP_SERVICE:
-    description: 'Will not provision app plan and services if value is false, default is true'
-    required: true
 runs:
   using: "composite"
   steps:
@@ -72,7 +69,6 @@ runs:
           "AZURE_APP_SERVICE_NAME"
           "AZURE_SUBSCRIPTION_ID" 
           "AZURE_LOCATION" 
-          "AZUREAI_RESOURCE_GROUP"
           "AZURE_APP_SERVICE_PLAN_NAME" 
           "AZURE_CONTAINER_REGISTRY_NAME" 
           "AZURE_CONTAINER_REPOSITORY_NAME"
@@ -238,9 +234,6 @@ outputs:
   AZUREAI_PROJECT_NAME:
     description: 'Azure AI Project Name'
     value: ${{ steps.setup-env-step.outputs.AZUREAI_PROJECT_NAME }}
-  AZUREAI_RESOURCE_GROUP:
-    description: 'Azure AI Resource Group Name'
-    value: ${{ steps.setup-env-step.outputs.AZURE_RESOURCE_GROUP }}
   AZURE_APP_INSIGHTS_NAME:
     description: 'Azure App Insights Name'
     value: ${{ steps.setup-env-step.outputs.AZURE_APP_INSIGHTS_NAME }}

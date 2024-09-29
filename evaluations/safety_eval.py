@@ -4,12 +4,15 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any
 
-from azure.identity import DefaultAzureCredential
 from promptflow.evals.evaluate import evaluate
 from promptflow.evals.evaluators import SexualEvaluator, ViolenceEvaluator, SelfHarmEvaluator, HateUnfairnessEvaluator
 from promptflow.evals.synthetic import AdversarialScenario, AdversarialSimulator
 
 from chat_request import get_response
+from azure_config import AzureConfig
+
+# Initialize AzureConfig
+azure_config = AzureConfig()
 
 async def callback(
     messages: List[Dict],
@@ -70,7 +73,7 @@ async def main():
         violence_evaluator = ViolenceEvaluator(azure_ai_project)
 
         scenario = AdversarialScenario.ADVERSARIAL_QA
-        azure_ai_project["credential"] = DefaultAzureCredential()
+        azure_ai_project["credential"] = azure_config.credential
         simulator = AdversarialSimulator(azure_ai_project=azure_ai_project)
 
         outputs = await simulator(

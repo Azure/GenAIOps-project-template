@@ -1,6 +1,6 @@
+# ai_search.py
+
 from typing import List
-import os
-from azure.identity import DefaultAzureCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.models import (
     VectorizedQuery,
@@ -8,18 +8,21 @@ from azure.search.documents.models import (
     QueryCaptionType,
     QueryAnswerType,
 )
+from azure_config import AzureConfig 
+
+# Initialize AzureConfig
+azure_config = AzureConfig()
 
 def retrieve_documentation(
     question: str,
     index_name: str,
     embedding: List[float],
+    search_endpoint: str
 ) -> str:
-
-    
     search_client = SearchClient(
-        endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
+        endpoint=azure_config.search_endpoint,
         index_name=index_name,
-        credential=DefaultAzureCredential()
+        credential=azure_config.credential
     )
 
     vector_query = VectorizedQuery(

@@ -18,7 +18,6 @@ jobs:
       AZURE_CONTAINER_REPOSITORY_NAME: ${{ steps.config-env.outputs.AZURE_CONTAINER_REPOSITORY_NAME }}
       AZURE_LOCATION: ${{ steps.config-env.outputs.AZURE_LOCATION }}
       AZURE_RESOURCE_GROUP: ${{ steps.config-env.outputs.AZURE_RESOURCE_GROUP }}
-      AZUREAI_RESOURCE_GROUP: ${{ steps.config-env.outputs.AZURE_RESOURCE_GROUP }}
       AZUREAI_PROJECT_NAME: ${{ steps.config-env.outputs.AZUREAI_PROJECT_NAME }}            
       AZURE_SUBSCRIPTION_ID: ${{ steps.config-env.outputs.AZURE_SUBSCRIPTION_ID }}
       AZURE_SEARCH_ENDPOINT: ${{ steps.config-env.outputs.AZURE_SEARCH_ENDPOINT }}
@@ -41,7 +40,6 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}          
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           MANUAL_PROVISIONING: ${{ vars.MANUAL_PROVISIONING }}          
-          AZURE_DEPLOY_APP_SERVICE: true          
         env:
           AZUREAI_PROJECT_NAME: ${{ vars.AZUREAI_PROJECT_NAME }}
           AZURE_APP_SERVICE_NAME: ${{ vars.AZURE_APP_SERVICE_NAME }}
@@ -55,8 +53,7 @@ jobs:
           AZURE_OPENAI_EMBEDDING_MODEL: ${{ vars.AZURE_OPENAI_EMBEDDING_MODEL }}
           AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
           AZURE_OPENAI_NAME: ${{ vars.AZURE_OPENAI_NAME }}
-          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-          AZUREAI_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}               
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}              
           AZURE_SEARCH_ENDPOINT: ${{ vars.AZURE_SEARCH_ENDPOINT }}
           LOAD_AZURE_SEARCH_SAMPLE_DATA: ${{ vars.LOAD_AZURE_SEARCH_SAMPLE_DATA }}
           AZURE_SEARCH_NAME: ${{ vars.AZURE_SEARCH_NAME }}
@@ -152,7 +149,7 @@ jobs:
 
       - name: AI-Based safety evaluation
         env:
-          AZUREAI_RESOURCE_GROUP: ${{needs.setup-env-job.outputs.AZURE_RESOURCE_GROUP}} 
+
           AZURE_LOCATION: ${{needs.setup-env-job.outputs.AZURE_LOCATION}}
           AZURE_OPENAI_ENDPOINT: ${{needs.setup-env-job.outputs.AZURE_OPENAI_ENDPOINT}}
           AZURE_OPENAI_DEPLOYMENT: ${{needs.setup-env-job.outputs.AZURE_OPENAI_CHAT_DEPLOYMENT}}

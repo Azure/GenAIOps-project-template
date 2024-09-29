@@ -41,9 +41,6 @@
     "containerRepositoryName": {
       "value": "${AZURE_CONTAINER_REPOSITORY_NAME}"
     },
-    "deployAppService": {
-      "value": "${AZURE_DEPLOY_APP_SERVICE}"
-    },
     "keyVaultName": {
       "value": "${AZURE_KEY_VAULT_NAME}"
     },

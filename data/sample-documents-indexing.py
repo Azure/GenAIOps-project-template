@@ -1,6 +1,9 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import pandas as pd
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from azure.identity import get_bearer_token_provider
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -24,9 +27,11 @@ from azure.search.documents.indexes.models import (
 )
 from typing import List, Dict
 from openai import AzureOpenAI
-from dotenv import load_dotenv
 
-load_dotenv()
+from azure_config import AzureConfig 
+
+# Initialize AzureConfig
+azure_config = AzureConfig()
 
 def delete_index(search_index_client: SearchIndexClient, search_index: str):
     print(f"deleting index {search_index}")
@@ -104,12 +109,13 @@ def create_index_definition(name: str) -> SearchIndex:
     return index
 
 def gen_documents(path: str) -> List[Dict[str, any]]:
-    openai_service_endoint = os.environ["AZURE_OPENAI_ENDPOINT"]
+    aoai_api_version = azure_config.aoai_api_version
+    openai_service_endoint = azure_config.aoai_endpoint
     openai_deployment = "text-embedding-ada-002"
 
-    token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
+    token_provider = get_bearer_token_provider(azure_config.credential, "https://cognitiveservices.azure.com/.default")
     client = AzureOpenAI(
-        api_version="2023-07-01-preview",
+        api_version=aoai_api_version,
         azure_endpoint=openai_service_endoint,
         azure_deployment=openai_deployment,
         azure_ad_token_provider=token_provider
@@ -118,7 +124,7 @@ def gen_documents(path: str) -> List[Dict[str, any]]:
     documents = pd.read_csv(path)
     items = []
     for document in documents.to_dict("records"):
-        content = document["description"]
+        content = document["content"]
         id = str(document["id"])
         title = document["name"]
         url = document["url"]
@@ -136,11 +142,11 @@ def gen_documents(path: str) -> List[Dict[str, any]]:
     return items
 
 if __name__ == "__main__":
-    rag_search = os.environ["AZURE_SEARCH_ENDPOINT"]
+    rag_search = azure_config.search_endpoint
     index_name = "rag-index"
 
     search_index_client = SearchIndexClient(
-        rag_search, DefaultAzureCredential()
+        rag_search, azure_config.credential
     )
 
     delete_index(search_index_client, index_name)
@@ -154,7 +160,7 @@ if __name__ == "__main__":
     search_client = SearchClient(
         endpoint=rag_search,
         index_name=index_name,
-        credential=DefaultAzureCredential(),
+        credential=azure_config.credential,
     )
     print(f"uploading {len(docs)} documents to index {index_name}")
     ds = search_client.upload_documents(docs)

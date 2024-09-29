@@ -32,10 +32,6 @@ param openAiName string = ''
 param searchServiceName string = ''
 param storageAccountName string = ''
 
-@allowed([true, false])
-param deployAppService bool = true
-var _deployAppService = deployAppService
-
 // Azure OpenAI parameters
 
 param oaiApiVersion string = '2023-05-15'
@@ -98,7 +94,7 @@ module ai 'core/host/ai-environment.bicep' = {
   }
 }
 
-module appServicePlan './core/host/appserviceplan.bicep' =  if (_deployAppService) {
+module appServicePlan './core/host/appserviceplan.bicep' = {
   name: 'appServicePlan'
   scope: rg
   params: {
@@ -113,31 +109,34 @@ module appServicePlan './core/host/appserviceplan.bicep' =  if (_deployAppServic
   }
 }
 
-module appService  'core/host/appservice.bicep'  = if (_deployAppService) {
+module appService  'core/host/appservice.bicep'  = {
   name: 'appService'
   scope: rg
   params: {
     name: _appServiceName
-    applicationInsightsName: _deployAppService?ai.outputs.appInsightsName:''
+    applicationInsightsName: ai.outputs.appInsightsName
     runtimeName: 'DOCKER'
     runtimeVersion: '${_containerRepositoryName}:dummy'
     keyVaultName: _keyVaultName
     location: location
     tags: union(_tags, { 'azd-service-name': 'rag-flow' })
-    appServicePlanId: _deployAppService?appServicePlan.outputs.id:''
+    appServicePlanId: appServicePlan.outputs.id
     scmDoBuildDuringDeployment: false
     appSettings: { 
       WEBSITES_ENABLE_APP_SERVICE_STORAGE: false
-      DOCKER_REGISTRY_SERVER_URL: _deployAppService?'https://${ai.outputs.containerRegistryName}.azurecr.io':''
-      WEBSITES_PORT: '80'  
+      DOCKER_REGISTRY_SERVER_URL: 'https://${ai.outputs.containerRegistryName}.azurecr.io'
+      WEBSITES_PORT: '80'
+      AZURE_SUBSCRIPTION_ID: subscription().subscriptionId
+      AZURE_RESOURCE_GROUP: rg.name
+      AZUREAI_PROJECT_NAME: ai.outputs.projectName
       PROMPTFLOW_WORKER_NUM: _promptFlowWorkerNum
       PROMPTFLOW_SERVING_ENGINE: _promptFlowServingEngine
-      AZURE_OPENAI_ENDPOINT: _deployAppService?ai.outputs.openAiEndpoint:''
+      AZURE_OPENAI_ENDPOINT: ai.outputs.openAiEndpoint
       AZURE_OPENAI_CHAT_DEPLOYMENT: oaiChatDeployment
       AZURE_OPENAI_EMBEDDING_DEPLOYMENT: oaiEmbeddingDeployment
       AZURE_OPENAI_EMBEDDING_MODEL: oaiEmbeddingModel
       AZURE_OPENAI_API_VERSION: oaiApiVersion
-      AZURE_SEARCH_ENDPOINT: _deployAppService?ai.outputs.searchEndpoint:''
+      AZURE_SEARCH_ENDPOINT: ai.outputs.searchEndpoint
       acrUseManagedIdentityCreds: true
     }
   }
@@ -234,41 +233,41 @@ module userAiSearchServiceContributor 'core/security/role.bicep' = if (!empty(pr
   }
 }
 
-module openaiRoleBackend 'core/security/role.bicep' = if (_deployAppService) {
+module openaiRoleBackend 'core/security/role.bicep' = {
   scope: rg
   name: 'openai-role-backend'
   params: {
-    principalId: _deployAppService?appService.outputs.identityPrincipalId:''
+    principalId: appService.outputs.identityPrincipalId
     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' //Cognitive Services OpenAI User
     principalType: principalType
   }
 }
 
-module aiSearchServiceContributor 'core/security/role.bicep' = if (_deployAppService) {
+module aiSearchServiceContributor 'core/security/role.bicep' = {
   scope: rg
   name: 'ai-search-service-contributor'
   params: {
-    principalId: _deployAppService?appService.outputs.identityPrincipalId:''
+    principalId: appService.outputs.identityPrincipalId
     roleDefinitionId: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' //Search Service Contributor
     principalType: principalType
   }
 }
 
-module aiSearchRole 'core/security/role.bicep' = if (_deployAppService) {
+module aiSearchRole 'core/security/role.bicep' =  {
   scope: rg
   name: 'ai-search-index-data-contributor'
   params: {
-    principalId: _deployAppService?appService.outputs.identityPrincipalId:''
+    principalId: appService.outputs.identityPrincipalId
     roleDefinitionId: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' //Search Index Data Contributor
     principalType: principalType
   }
 }
 
-module appserviceAcrRolePull 'core/security/role.bicep' = if (_deployAppService) {
+module appserviceAcrRolePull 'core/security/role.bicep' = {
   scope: rg
   name: 'app-service-acr-role-pull'  
   params: {
-    principalId: _deployAppService?appService.outputs.identityPrincipalId:''
+    principalId: appService.outputs.identityPrincipalId
     roleDefinitionId: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
     principalType: principalType
   }
@@ -292,7 +291,6 @@ output AZURE_CONTAINER_REGISTRY_ENDPOINT string = ai.outputs.containerRegistryEn
 output AZURE_KEY_VAULT_ENDPOINT string = ai.outputs.keyVaultEndpoint
 output AZURE_SEARCH_ENDPOINT string = ai.outputs.searchEndpoint
 
-output AZUREAI_RESOURCE_GROUP string = rg.name
 output AZUREAI_HUB_NAME string = ai.outputs.hubName
 output AZUREAI_PROJECT_NAME string = ai.outputs.projectName
 output AZURE_APP_INSIGHTS_NAME string = ai.outputs.appInsightsName 
