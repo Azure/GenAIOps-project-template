@@ -8,6 +8,9 @@ junit/
 responses.jsonl
 temp-dataset.jsonl
 
+__azurite_db_blob__.json
+ __azurite_db_blob_extent__.json
+ 
 # Python
 *.py[cod]
 *$py.class
