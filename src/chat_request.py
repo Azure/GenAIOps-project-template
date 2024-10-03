@@ -6,7 +6,8 @@ import pathlib
 from ai_search import retrieve_documentation
 from promptflow.tools.common import init_azure_openai_client
 from promptflow.connections import AzureOpenAIConnection
-from promptflow.core import (AzureOpenAIModelConfiguration, Prompty, tool)
+from promptflow.core import (AzureOpenAIModelConfiguration, Prompty)
+from promptflow.tracing import trace
 from azure_config import AzureConfig 
 
 # Initialize AzureConfig
@@ -35,7 +36,7 @@ def get_context(question, embedding):
         search_endpoint=azure_config.search_endpoint
     )
 
-@tool
+@trace
 def get_response(question, chat_history):
     print("inputs:", question)
     embedding = get_embedding(question)
@@ -63,6 +64,8 @@ def get_response(question, chat_history):
     print("result: ", result)
 
     return {"answer": result, "context": context}
+
+
 
 if __name__ == "__main__":
     get_response("How can I access my medical records?", [])

@@ -8,6 +8,8 @@ from promptflow.evals.evaluate import evaluate
 from promptflow.evals.evaluators import SexualEvaluator, ViolenceEvaluator, SelfHarmEvaluator, HateUnfairnessEvaluator
 from promptflow.evals.synthetic import AdversarialScenario, AdversarialSimulator
 
+from azure.identity import DefaultAzureCredential
+
 from chat_request import get_response
 from azure_config import AzureConfig
 
@@ -42,19 +44,26 @@ async def callback(
         "session_state": session_state
     }
 
+
 async def main():
+
+    # Read configuration
+    azure_config = AzureConfig()
+
+    # Set required environment variables
+    os.environ['AZURE_OPENAI_ENDPOINT'] = azure_config.aoai_endpoint
+    os.environ['AZURE_OPENAI_API_KEY'] = azure_config.aoai_api_key    
+
     # Read environment variables
-    azure_location = os.getenv("AZURE_LOCATION")
-    azure_subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
-    azure_resource_group = os.getenv("AZURE_RESOURCE_GROUP")
-    azure_project_name = os.getenv("AZUREAI_PROJECT_NAME")
-    prefix = os.getenv("PREFIX", datetime.now().strftime("%y%m%d%H%M%S"))[:14] 
+    azure_location = azure_config.location
+    azure_subscription_id = azure_config.subscription_id
+    azure_resource_group = azure_config.resource_group
+    azure_project_name = azure_config.workspace_name
 
     print("AZURE_LOCATION=", azure_location)
     print("AZURE_SUBSCRIPTION_ID=", azure_subscription_id)
     print("AZURE_RESOURCE_GROUP=", azure_resource_group)
     print("AZUREAI_PROJECT_NAME=", azure_project_name)
-    print("PREFIX=", prefix)    
 
     valid_locations = ["eastus2", "francecentral", "uksouth", "swedencentral"]
 
@@ -73,7 +82,7 @@ async def main():
         violence_evaluator = ViolenceEvaluator(azure_ai_project)
 
         scenario = AdversarialScenario.ADVERSARIAL_QA
-        azure_ai_project["credential"] = azure_config.credential
+        azure_ai_project["credential"] = DefaultAzureCredential()
         simulator = AdversarialSimulator(azure_ai_project=azure_ai_project)
 
         outputs = await simulator(
@@ -85,6 +94,8 @@ async def main():
         )
         adversarial_conversation_result = outputs.to_eval_qa_json_lines()
         print(f"Adversarial conversation results: {adversarial_conversation_result}.")
+
+        prefix = os.getenv("PREFIX", datetime.now().strftime("%y%m%d%H%M%S"))[:14] 
 
         try:
             azure_ai_project["credential"] = ""
@@ -150,6 +161,8 @@ async def main():
                 },
                 output_path="./adversarial_test_w_jailbreak.json"
             )
+
+        print(f"Check {prefix} Adversarial Tests results in the 'Evaluation' section of your project: {azure_config.workspace_name}.")
 
 if __name__ == '__main__':
     import promptflow as pf

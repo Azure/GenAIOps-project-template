@@ -29,6 +29,7 @@ from typing import List, Dict
 from openai import AzureOpenAI
 
 from azure_config import AzureConfig 
+from azure.identity import DefaultAzureCredential
 
 # Initialize AzureConfig
 azure_config = AzureConfig()
@@ -113,7 +114,7 @@ def gen_documents(path: str) -> List[Dict[str, any]]:
     openai_service_endoint = azure_config.aoai_endpoint
     openai_deployment = "text-embedding-ada-002"
 
-    token_provider = get_bearer_token_provider(azure_config.credential, "https://cognitiveservices.azure.com/.default")
+    token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
     client = AzureOpenAI(
         api_version=aoai_api_version,
         azure_endpoint=openai_service_endoint,
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     index_name = "rag-index"
 
     search_index_client = SearchIndexClient(
-        rag_search, azure_config.credential
+        rag_search, DefaultAzureCredential()
     )
 
     delete_index(search_index_client, index_name)
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     search_client = SearchClient(
         endpoint=rag_search,
         index_name=index_name,
-        credential=azure_config.credential,
+        credential=DefaultAzureCredential(),
     )
     print(f"uploading {len(docs)} documents to index {index_name}")
     ds = search_client.upload_documents(docs)

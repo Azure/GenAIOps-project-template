@@ -9,6 +9,7 @@ from azure.search.documents.models import (
     QueryAnswerType,
 )
 from azure_config import AzureConfig 
+from azure.identity import DefaultAzureCredential
 
 # Initialize AzureConfig
 azure_config = AzureConfig()
@@ -22,7 +23,7 @@ def retrieve_documentation(
     search_client = SearchClient(
         endpoint=azure_config.search_endpoint,
         index_name=index_name,
-        credential=azure_config.credential
+        credential=DefaultAzureCredential()
     )
 
     vector_query = VectorizedQuery(

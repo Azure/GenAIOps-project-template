@@ -1,43 +1,65 @@
-from azure.ai.ml import MLClient
-from azure.identity import DefaultAzureCredential
 import os
+import re
 
 class AzureConfig:
     def __init__(self):
-        # Load environment variables
+        # Load environment variables for Azure configuration
         self.subscription_id = os.environ["AZURE_SUBSCRIPTION_ID"]
         self.resource_group = os.environ["AZURE_RESOURCE_GROUP"]
         self.workspace_name = os.environ["AZUREAI_PROJECT_NAME"]
+        self.location = os.getenv("AZURE_LOCATION", "")
+        self.aoai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+        self.aoai_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "")
+        self.search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
+        self.aoai_api_key = "use_managed_identity"
+        self.aoai_account_name = self.get_domain_prefix(self.aoai_endpoint)
+        self.search_account_name = self.get_domain_prefix(self.search_endpoint)
 
-        # Initialize MLClient with appropriate credentials
-        self.ml_client = MLClient(
-            self.get_credentials(),
-            self.subscription_id,
-            self.resource_group,
-            self.workspace_name
-        )
+        if not self.aoai_endpoint:
+            # Try to get the connection information from AI Project
+            # Initialize MLClient with the loaded credentials and configuration
+            from azure.ai.ml import MLClient
+            from azure.identity import DefaultAzureCredential
+            from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
 
-        # Retrieve Azure OpenAI and Azure AI Search connections and credentials
-        self.aoai_connection = self.ml_client.connections.get('aoai-connection')
-        self.search_connection = self.ml_client.connections.get('rag-search')
+            # Initialize MLClient with the loaded credentials and configuration
+            self.ml_client = MLClient(
+                DefaultAzureCredential(),
+                self.subscription_id,
+                self.resource_group,
+                self.workspace_name
+            )
 
-        # Extract necessary details for Azure OpenAI
-        self.aoai_endpoint = self.aoai_connection.target
-        self.aoai_api_version = self.aoai_connection.metadata.get('ApiVersion', '')
-        self.credential = self.get_credentials()
+            # Retrieve the workspace details from Azure ML
+            self.workspace = self.ml_client.workspaces.get(
+                name=self.workspace_name,
+                resource_group_name=self.resource_group
+            )
+            self.location = self.workspace.location
 
-        # Extract necessary details for Azure AI Search
-        self.search_endpoint = self.search_connection.target
+            # Retrieve connections for Azure OpenAI and Azure AI Search
+            self.aoai_connection = self.ml_client.connections.get('aoai-connection')
+            self.search_connection = self.ml_client.connections.get('rag-search')
 
-    def get_credentials(self):
-        """
-        Determines the appropriate Azure credentials based on the environment.
+            # Extract endpoint and API version for Azure OpenAI
+            self.aoai_endpoint = self.aoai_connection.target
+            self.aoai_api_version = self.aoai_connection.metadata.get('ApiVersion', '')
 
-        Returns:
-            Azure credentials object.
-        """
-        try:
-            return DefaultAzureCredential()
-        except Exception as e:
-            print(f"Error determining credentials: {e}")
-            raise
+            # Obtain credentials and API key for Azure OpenAI
+            hostname = self.aoai_endpoint.split("://")[1].split("/")[0]
+            account_name = hostname.split('.')[0]
+            self.cognitive_client = CognitiveServicesManagementClient(DefaultAzureCredential(), self.subscription_id)
+            keys = self.cognitive_client.accounts.list_keys(self.resource_group, account_name)
+            self.aoai_api_key = keys.key1
+            
+            # Extract endpoint for Azure AI Search
+            self.search_endpoint = self.search_connection.target
+
+            self.aoai_account_name = self.get_domain_prefix(self.aoai_endpoint)
+            self.search_account_name = self.get_domain_prefix(self.search_endpoint)
+
+    def get_domain_prefix(self, url):
+        match = re.search(r'https?://([^.]+)', url)
+        if match:
+            return match.group(1)
+        return None

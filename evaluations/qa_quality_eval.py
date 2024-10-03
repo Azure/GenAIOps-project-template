@@ -7,20 +7,16 @@ from promptflow.core import AzureOpenAIModelConfiguration
 from promptflow.evals.evaluate import evaluate
 from promptflow.evals.evaluators import RelevanceEvaluator, FluencyEvaluator, GroundednessEvaluator, CoherenceEvaluator
 
+from azure_config import AzureConfig 
+
 def main():
 
-    # Read environment variables
-    azure_location = os.getenv("AZURE_LOCATION")
-    azure_subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
-    azure_resource_group = os.getenv("AZURE_RESOURCE_GROUP")
-    azure_project_name = os.getenv("AZUREAI_PROJECT_NAME")
-    prefix = os.getenv("PREFIX", datetime.now().strftime("%y%m%d%H%M%S"))[:14] 
+    # Read configuration
+    azure_config = AzureConfig()
 
-    print("AZURE_LOCATION =", azure_location)
-    print("AZURE_SUBSCRIPTION_ID =", azure_subscription_id)
-    print("AZURE_RESOURCE_GROUP =", azure_resource_group)
-    print("AZUREAI_PROJECT_NAME=", azure_project_name)
-    print("PREFIX =", prefix)    
+    # Set required environment variables
+    os.environ['AZURE_OPENAI_ENDPOINT'] = azure_config.aoai_endpoint
+    os.environ['AZURE_OPENAI_API_KEY'] = azure_config.aoai_api_key    
 
     ##################################
     ## Base Run
@@ -52,22 +48,23 @@ def main():
         for item in data_list:
             f.write(json.dumps(item) + '\n')    
 
+
     ##################################
     ## Evaluation
     ##################################
 
     # Initialize Azure OpenAI Connection with your environment variables
     model_config = AzureOpenAIModelConfiguration(
-        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-        api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-        azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
-        api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
+        azure_endpoint=azure_config.aoai_endpoint,
+        api_key=azure_config.aoai_api_key,
+        azure_deployment=os.environ.get("AZURE_OPENAI_CHAT_DEPLOYMENT"),
+        api_version=azure_config.aoai_api_version,
     )
     
     azure_ai_project = {
-        "subscription_id": os.getenv("AZURE_SUBSCRIPTION_ID"),
-        "resource_group_name": os.getenv("AZURE_RESOURCE_GROUP"),
-        "project_name": os.getenv("AZUREAI_PROJECT_NAME"),
+        "subscription_id": azure_config.subscription_id,
+        "resource_group_name": azure_config.resource_group,
+        "project_name": azure_config.workspace_name,
     }    
 
     # https://learn.microsoft.com/en-us/azure/ai-studio/how-to/develop/flow-evaluate-sdk
@@ -78,9 +75,14 @@ def main():
 
     data = "./responses.jsonl"  # path to the data file
 
+    prefix = os.getenv("PREFIX", datetime.now().strftime("%y%m%d%H%M%S"))[:14] 
+    evaluation_name=f"{prefix} Quality Evaluation"
+
+    print(f"Executing evaluation: {evaluation_name}.") 
+
     try:
         result = evaluate(
-            evaluation_name=f"{prefix} Quality Evaluation",
+            evaluation_name=evaluation_name,
             data=data,
             evaluators={
                 "Fluency": fluency_evaluator,
@@ -92,9 +94,9 @@ def main():
             output_path="./qa_flow_quality_eval.json"
         )
     except Exception as e:
-        print(f"An error occurred during evaluation: {e}\n Retrying without reporting results in Azure AI Project.")
+        print(f"An error occurred during evaluation: {e}. Retrying without reporting results to Azure AI Project.")
         result = evaluate(
-            evaluation_name=f"{prefix} Quality Evaluation",
+            evaluation_name=evaluation_name,
             data=data,
             evaluators={
                 "Fluency": fluency_evaluator,
@@ -103,8 +105,10 @@ def main():
                 "Coherence": coherence_evaluator
             },
             output_path="./qa_flow_quality_eval.json"
-        )        
+        )
 
+    print(f"Check QA evaluation result {evaluation_name} in the 'Evaluation' section of your project: {azure_config.workspace_name}.")
+          
 if __name__ == '__main__':
     import promptflow as pf
     main()

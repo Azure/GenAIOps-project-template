@@ -1,10 +1,12 @@
+# For the GenAIOps Wokshop
 local/
 dist/
 .env
 .promptflow/
-*.xlsx
 junit/
+*.xlsx
 responses.jsonl
+temp-dataset.jsonl
 
 # Python
 *.py[cod]
