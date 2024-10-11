@@ -1,6 +1,9 @@
 import os
 import re
 
+from dotenv import load_dotenv
+load_dotenv()
+
 class AzureConfig:
     def __init__(self):
         # Load environment variables for Azure configuration
