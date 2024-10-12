@@ -140,10 +140,11 @@ runs:
           # Resource group may also be empty because previous deployment finished with failure.
           # In both cases we recreate resources
           if [ "$deployment_exists" = true ] && [ "$resource_group_exist" = false ]; then
-            echo "🔶 | Deployment exists but resource group $AZURE_RESOURCE_GROUP doesn't, cleaning resources."
-            azd down --force --purge
-            rm -rf .azure
-            azd init -e ${{ inputs.AZURE_ENV_NAME }} -l $AZURE_LOCATION -s $AZURE_SUBSCRIPTION_ID
+            echo "❌ | Deployment exists but resource group $AZURE_RESOURCE_GROUP doesn't."
+            exit 1
+            # azd down --force --purge
+            # rm -rf .azure
+            # azd init -e ${{ inputs.AZURE_ENV_NAME }} -l $AZURE_LOCATION -s $AZURE_SUBSCRIPTION_ID
           fi           
 
           # Set environment variables by getting them from the GitHub environment or the last deployment. 
