@@ -149,9 +149,30 @@ jobs:
           PREFIX: ${{ github.sha }} 
         run: |
           echo "Run AI-Based flow evaluation"
+          required_envs=(
+            "AZURE_SUBSCRIPTION_ID"
+            "AZURE_LOCATION"
+            "AZURE_RESOURCE_GROUP"
+            "AZURE_OPENAI_NAME"
+            "AZURE_OPENAI_ENDPOINT"
+            "AZURE_SEARCH_ENDPOINT"
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+            "AZURE_OPENAI_CHAT_DEPLOYMENT"
+            "AZURE_OPENAI_EMBEDDING_MODEL"
+            "AZURE_OPENAI_API_VERSION"
+            "AZUREAI_PROJECT_NAME"
+            "PREFIX"
+          )
+          for env_var in "${required_envs[@]}"; do
+            if [ -z "${!env_var}" ]; then
+              echo Env variable "$env_var is needed but not set. Exiting."
+              exit 1
+            fi
+          done          
           echo "AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
           echo "AZURE_OPENAI_NAME=${AZURE_OPENAI_NAME}"
           export AZURE_OPENAI_API_KEY=$(az cognitiveservices account keys list --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_OPENAI_NAME} --query "key1" --output tsv)
+          export PYTHONPATH=./src:$PYTHONPATH
           python evaluations/qa_quality_eval.py
         shell: bash
 
@@ -227,6 +248,26 @@ jobs:
           AZURE_CONTAINER_REPOSITORY_NAME: ${{needs.setup-env-job.outputs.AZURE_CONTAINER_REPOSITORY_NAME}}             
         run: |
           echo "✅ Run image..."
+          required_envs=(
+            "AZURE_SUBSCRIPTION_ID"
+            "AZURE_LOCATION"
+            "AZURE_RESOURCE_GROUP"
+            "AZURE_SEARCH_ENDPOINT"
+            "AZURE_OPENAI_CHAT_DEPLOYMENT"
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+            "AZURE_OPENAI_EMBEDDING_MODEL"
+            "AZURE_OPENAI_API_VERSION"
+            "AZURE_OPENAI_ENDPOINT"
+            "PROMPTFLOW_WORKER_NUM"
+            "PROMPTFLOW_SERVING_ENGINE"
+            "AZURE_CONTAINER_REPOSITORY_NAME"
+          )
+          for env_var in "${required_envs[@]}"; do
+            if [ -z "${!env_var}" ]; then
+              echo Env variable "$env_var is needed but not set. Exiting."
+              exit 1
+            fi
+          done   
           image_tag=$AZURE_CONTAINER_REPOSITORY_NAME:develop-${{ github.sha }}
           docker run -d -p 8080:8080 -e PROMPTFLOW_SERVING_ENGINE=$PROMPTFLOW_SERVING_ENGINE -e PROMPTFLOW_WORKER_NUM=$PROMPTFLOW_WORKER_NUM $image_tag
 

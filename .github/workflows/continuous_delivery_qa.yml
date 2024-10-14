@@ -112,9 +112,38 @@ jobs:
           AZURE_APP_SERVICE_PLAN_NAME: ${{needs.setup-env-job.outputs.AZURE_APP_SERVICE_PLAN_NAME}}      
         run: |
             echo "Run AI-Based flow evaluation"
+            required_envs=(
+              "AZURE_OPENAI_ENDPOINT"
+              "AZURE_OPENAI_DEPLOYMENT"
+              "AZUREAI_PROJECT_NAME"
+              "AZURE_OPENAI_API_VERSION"
+              "AZURE_SUBSCRIPTION_ID"
+              "AZURE_RESOURCE_GROUP"
+              "AZURE_OPENAI_NAME"
+              "LOCATION"
+              "AZURE_LOCATION"
+              "AZURE_CONTAINER_REGISTRY_NAME"
+              "AZURE_CONTAINER_REPOSITORY_NAME"
+              "AZURE_SEARCH_ENDPOINT"
+              "AZURE_OPENAI_CHAT_DEPLOYMENT"
+              "AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+              "AZURE_OPENAI_EMBEDDING_MODEL"
+              "PROMPTFLOW_WORKER_NUM"
+              "PROMPTFLOW_SERVING_ENGINE"
+              "AZURE_APP_SERVICE_NAME"
+              "AZURE_APP_SERVICE_PLAN_NAME"
+            )
+      
+            for env_var in "${required_envs[@]}"; do
+              if [ -z "${!env_var}" ]; then
+                echo "Error: Environment variable '$env_var' is required but not set. Exiting."
+                exit 1
+              fi
+            done            
             echo "AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
             echo "AZURE_OPENAI_NAME=${AZURE_OPENAI_NAME}"
             export AZURE_OPENAI_API_KEY=$(az cognitiveservices account keys list --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_OPENAI_NAME} --query "key1" --output tsv)
+            export PYTHONPATH=./src:$PYTHONPATH
             python evaluations/qa_quality_eval.py
         shell: bash
 
@@ -172,8 +201,37 @@ jobs:
           PREFIX: ${{ github.sha }}
         run: |
           echo "Run Automated Adversarial Testing"
+          required_envs=(
+            "AZURE_LOCATION"
+            "AZURE_OPENAI_ENDPOINT"
+            "AZURE_OPENAI_DEPLOYMENT"
+            "AZUREAI_PROJECT_NAME"
+            "AZURE_OPENAI_API_VERSION"
+            "AZURE_SUBSCRIPTION_ID"
+            "AZURE_RESOURCE_GROUP"
+            "AZURE_OPENAI_NAME"
+            "LOCATION"
+            "AZURE_CONTAINER_REGISTRY_NAME"
+            "AZURE_CONTAINER_REPOSITORY_NAME"
+            "AZURE_SEARCH_ENDPOINT"
+            "AZURE_OPENAI_CHAT_DEPLOYMENT"
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+            "AZURE_OPENAI_EMBEDDING_MODEL"
+            "PROMPTFLOW_WORKER_NUM"
+            "PROMPTFLOW_SERVING_ENGINE"
+            "AZURE_APP_SERVICE_NAME"
+            "AZURE_APP_SERVICE_PLAN_NAME"
+            "PREFIX"
+          )
+          for env_var in "${required_envs[@]}"; do
+            if [ -z "${!env_var}" ]; then
+              echo "Error: Environment variable '$env_var' is required but not set. Exiting."
+              exit 1
+            fi
+          done          
           export PYTHONPATH=./src:$PYTHONPATH
           export AZURE_OPENAI_API_KEY=$(az cognitiveservices account keys list --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_OPENAI_NAME} --query "key1" --output tsv)          
+          export PYTHONPATH=./src:$PYTHONPATH                 
           python evaluations/safety_eval.py
 
       - name: Upload evaluation results

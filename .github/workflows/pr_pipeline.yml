@@ -7,46 +7,14 @@ on:
       
 jobs:
 
-  unit-testing:
-    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}    
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:       
-      - uses: actions/checkout@v4
-      - name: Setup Python 
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest
-          pip install -r requirements.txt
-      - name: Test with pytest
-        env:
-          PYTHONPATH: src
-          PYTHONWARNINGS: ignore::DeprecationWarning,ignore::RemovedInMarshmallow4Warning
-        run: echo "tests"
-
-  static-code-analysis:
-    needs: unit-testing
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Finds anti-patterns in code
-        run: |
-          echo "Run Pylint"
-      - name: Run security checks
-        run: |
-          echo "Run Bandit"
-
   config-env-job:
     if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}
     runs-on: ubuntu-latest
     environment: dev
-    needs: [unit-testing, static-code-analysis]
     outputs:
       AZURE_RESOURCE_GROUP: ${{ steps.config-env.outputs.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
       AZURE_OPENAI_NAME: ${{ steps.config-env.outputs.AZURE_OPENAI_NAME }}
       AZURE_OPENAI_ENDPOINT: ${{ steps.config-env.outputs.AZURE_OPENAI_ENDPOINT }}    
       AZURE_SEARCH_ENDPOINT: ${{ steps.config-env.outputs.AZURE_SEARCH_ENDPOINT }}
@@ -54,6 +22,7 @@ jobs:
       AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ steps.config-env.outputs.AZURE_OPENAI_CHAT_DEPLOYMENT }}
       AZURE_OPENAI_EMBEDDING_MODEL: ${{ steps.config-env.outputs.AZURE_OPENAI_EMBEDDING_MODEL }}
       AZURE_OPENAI_API_VERSION: ${{ steps.config-env.outputs.AZURE_OPENAI_API_VERSION }}
+      AZUREAI_PROJECT_NAME: ${{ steps.config-env.outputs.AZUREAI_PROJECT_NAME }} 
     steps: 
       - uses: actions/checkout@v4
       - name: Get environment variables
@@ -90,8 +59,56 @@ jobs:
           AZURE_LOG_ANALYTICS_NAME: ${{ vars.AZURE_LOG_ANALYTICS_NAME }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}
 
+  unit-testing:
+    if: ${{ github.repository != 'Azure/GenAIOps-project-template' }}    
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: [config-env-job]        
+    steps:       
+      - uses: actions/checkout@v4
+      - name: Login to Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}           
+      - name: Setup Python 
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -r requirements.txt
+      - name: Test with pytest
+        env:
+          PYTHONPATH: src
+          PYTHONWARNINGS: ignore::DeprecationWarning,ignore::RemovedInMarshmallow4Warning
+          AZURE_RESOURCE_GROUP: ${{needs.config-env-job.outputs.AZURE_RESOURCE_GROUP}}
+          AZURE_SUBSCRIPTION_ID: ${{needs.config-env-job.outputs.AZURE_SUBSCRIPTION_ID}} 
+          AZUREAI_PROJECT_NAME: ${{needs.config-env-job.outputs.AZUREAI_PROJECT_NAME}}
+          AZURE_OPENAI_CHAT_DEPLOYMENT: ${{needs.config-env-job.outputs.AZURE_OPENAI_CHAT_DEPLOYMENT}}
+        run: pytest tests/ --doctest-modules --junitxml=junit/test-results-3.11.xml
+      - name: Upload pytest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-3.11
+          path: junit/test-results-3.11.xml
+        if: always()
+    
+  static-code-analysis:
+    needs: unit-testing
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Finds anti-patterns in code
+        run: |
+          echo "Run Pylint"
+      - name: Run security checks
+        run: |
+          echo "Run Bandit"
+
   evaluate-flow:
-    needs: [config-env-job]
+    needs: [unit-testing, static-code-analysis,config-env-job]
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -112,20 +129,42 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}           
-
       - name: AI-Based prompt evaluation
         env: 
           AZURE_RESOURCE_GROUP: ${{needs.config-env-job.outputs.AZURE_RESOURCE_GROUP}}
           AZURE_OPENAI_NAME: ${{needs.config-env-job.outputs.AZURE_OPENAI_NAME}}
+          AZURE_SUBSCRIPTION_ID: ${{needs.config-env-job.outputs.AZURE_SUBSCRIPTION_ID}} 
+          AZURE_LOCATION: ${{needs.config-env-job.outputs.AZURE_LOCATION}}                    
           AZURE_OPENAI_ENDPOINT: ${{needs.config-env-job.outputs.AZURE_OPENAI_ENDPOINT}}
           AZURE_SEARCH_ENDPOINT: ${{needs.config-env-job.outputs.AZURE_SEARCH_ENDPOINT}}
           AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{needs.config-env-job.outputs.AZURE_OPENAI_EMBEDDING_DEPLOYMENT}}
           AZURE_OPENAI_CHAT_DEPLOYMENT: ${{needs.config-env-job.outputs.AZURE_OPENAI_CHAT_DEPLOYMENT}}
           AZURE_OPENAI_EMBEDDING_MODEL: ${{needs.config-env-job.outputs.AZURE_OPENAI_EMBEDDING_MODEL}}
-          AZURE_OPENAI_API_VERSION: ${{needs.config-env-job.outputs.AZURE_OPENAI_API_VERSION}}    
+          AZURE_OPENAI_API_VERSION: ${{needs.config-env-job.outputs.AZURE_OPENAI_API_VERSION}}  
+          AZUREAI_PROJECT_NAME: ${{needs.config-env-job.outputs.AZUREAI_PROJECT_NAME}}              
         run: |
           echo "Run AI-Based prompt evaluation"
+          required_envs=(
+            "AZURE_SUBSCRIPTION_ID"
+            "AZURE_LOCATION"            
+            "AZURE_RESOURCE_GROUP"
+            "AZURE_OPENAI_NAME"
+            "AZURE_OPENAI_ENDPOINT"
+            "AZURE_SEARCH_ENDPOINT"
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+            "AZURE_OPENAI_CHAT_DEPLOYMENT"
+            "AZURE_OPENAI_EMBEDDING_MODEL"
+            "AZURE_OPENAI_API_VERSION"
+            "AZUREAI_PROJECT_NAME"
+          )
+          for env_var in "${required_envs[@]}"; do
+            if [ -z "${!env_var}" ]; then
+              echo Env variable "$env_var is needed but not set. Exiting."
+              exit 1
+            fi
+          done
           export AZURE_OPENAI_API_KEY=$(az cognitiveservices account keys list --resource-group ${AZURE_RESOURCE_GROUP} --name ${AZURE_OPENAI_NAME} --query "key1" --output tsv)
+          export PYTHONPATH=./src:$PYTHONPATH
           python evaluations/prompty_eval.py
         shell: bash
 

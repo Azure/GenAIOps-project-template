@@ -39,6 +39,21 @@ The following deployments will be created in the Azure OpenAI Service:
 
 To find out if you have a quota for the model in a specific region, refer to the [check your quota](docs/check_your_quota.md) documentation. For more details about the deployments, you can refer to the [ai.yaml](infra/ai.yaml) file. It is important to check if there is a quota for these models in the desired region.
 
+## Prerequisites
+
+* [Azure CLI (az)](https://aka.ms/install-az) - to manage Azure resources.
+* [Azure Developer CLI (azd)](https://aka.ms/install-azd) - to manage Azure deployments.
+* [GitHub CLI (gh)](https://cli.github.com/) - to create GitHub repo.
+* [Git](https://git-scm.com/downloads) - to update repository contents.
+* [Python 3.11](https://www.python.org/downloads/release/python-3118/) - to create index and run the flow.
+
+You will also need:
+* [Azure Subscription](https://azure.microsoft.com/free/) - sign up for a free account.
+* [GitHub Account](https://github.com/signup) - sign up for a free account.
+* [Access to Azure OpenAI](https://learn.microsoft.com/legal/cognitive-services/openai/limited-access) - submit a form to request access.
+* Permissions to create a Service Principal (SP) in your Azure AD Tenant.
+* Permissions to assign the Owner role to the SP within the subscription.
+
 ## Infrastructure as Code
 
 To facilitate the creation of resources, this repository includes Bicep templates (IaaC) to create the following project resources. More details can be found in the [main.bicep](infra/main.bicep) file.

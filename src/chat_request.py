@@ -1,6 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
-
 import os
 import pathlib
 from ai_search import retrieve_documentation

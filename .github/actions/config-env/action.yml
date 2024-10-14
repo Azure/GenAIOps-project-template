@@ -43,6 +43,42 @@ runs:
       with:
         creds: ${{ inputs.AZURE_CREDENTIALS }}
 
+    - name: Set permissions for service principal 
+      shell: bash
+      run: |
+        echo "Setting permissions for service principal..."
+        AZURE_CREDENTIALS=$(echo '${{ inputs.AZURE_CREDENTIALS }}' | jq -r .)
+        tenantId=$(echo $AZURE_CREDENTIALS | jq -r .tenantId)
+        rg=rg-${{ inputs.AZURE_ENV_NAME }}
+        clientId=$(echo $AZURE_CREDENTIALS | jq -r .clientId)
+        clientSecret=$(echo $AZURE_CREDENTIALS | jq -r .clientSecret) 
+        subscriptionId=${{ inputs.AZURE_SUBSCRIPTION_ID }}
+        principalId=$(az ad sp list --filter "appId eq '$clientId'" --query "[].id" -o tsv)
+        
+        scope="/subscriptions/$subscriptionId/resourceGroups/$rg"
+
+        # Assign roles
+        roles=(
+        '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'  # Storage Blob Data Reader
+        '8311e382-0749-4cb8-b61a-304f252e45ec'  # ACR Push Role
+        '7f951dda-4ed3-4680-a7ca-43fe172d538d'  # ACR Pull Role
+        '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'  # Cognitive Services OpenAI User
+        'f6c7c914-8db3-469d-8ca1-694a8f32e121'  # Data Scientist
+        'ea01e6af-a1c1-4350-9563-ad00f8c72ec5'  # Secrets Reader
+        '8ebe5a00-799e-43f5-93ac-243d3dce84a7'  # Search Index Data Contributor
+        '7ca78c08-252a-4471-8644-bb5ff32d4ba0'  # Search Service Contributor
+        '64702f94-c441-49e6-a78b-ef80e0188fee'  # Azure AI Developer
+        )
+
+        for roleId in "${roles[@]}"; do
+        az role assignment create \
+          --assignee-object-id "$principalId" \
+          --assignee-principal-type "ServicePrincipal" \
+          --role "$roleId" \
+          --scope "$scope"
+        done
+
+
     - name: Login to Azure Developer CLI 
       shell: bash
       run: |
@@ -133,7 +169,7 @@ runs:
           else
             resource_group_exist=$(az group exists --name "$AZURE_RESOURCE_GROUP")  
           fi        
-          echo "🔶 | Resource group ${AZURE_RESOURCE_GROUP:-'-'} exist status: $resource_group_exist"
+          echo "🔶 | Resource group ${AZURE_RESOURCE_GROUP:-'Undefined'} exist status: $resource_group_exist"
 
           # Previous deployment exists but the resource group doesn't. 
           # This situation occurs if you made a deployment and then deleted the resource group.
@@ -156,8 +192,9 @@ runs:
 
           echo "${{ inputs.AZURE_ENV_NAME }} environment variables values." 
           
-          # Set environment variables and update AZD variables 
-          
+          # Set environment variables
+          echo "🔶 | Set environment variables."
+
           for VAR in "${VARIABLES[@]}"; do
               # Retrieve value from Azure environment
               VALUE_OUTPUT=$(azd env get-values -e "$AZURE_ENV_NAME" | grep $VAR | cut -d'=' -f2 | tr -d '"' || true)
@@ -177,11 +214,6 @@ runs:
                   SOURCE="Hard-coded"
               fi
 
-              # Update the Azure environment if needed
-              if [ -n "$VALUE" ] && [ "$VALUE" != "$VALUE_OUTPUT" ]; then
-                  echo "Updating $VAR in Azure environment..."
-                  azd env set $VAR $VALUE
-              fi
               # Export the variable to the current environment
               export $VAR=$VALUE
               echo "$VAR: $VALUE (from $SOURCE)"
@@ -189,35 +221,26 @@ runs:
 
           # Previous deployment exists. Update provisioned resources in case template has changed.
           if [  "$deployment_exists" = true ]; then
-            echo "🔶 | Previous deployment exists. Updating provisioned resources..."
+            echo "🔶 | Previous deployment exists. Updating provisioned resources in case template has changed..."
             azd provision --no-prompt
           fi
         fi
 
-        # Updating azd environment variables after provisioning
+        # Updating environment variables after provisioning
 
         for VAR in "${VARIABLES[@]}"; do
             # Retrieve value from Azure environment
             VALUE_OUTPUT=$(azd env get-values -e "$AZURE_ENV_NAME" | grep $VAR | cut -d'=' -f2 | tr -d '"' || true)
-            # Retrieve the current value in the GitHub environment
-            VALUE_GHAENV=$(eval echo \${$VAR})
-            # Determine which value to use (GitHub Actions env value or Azure env value)
-            if [ -n "$VALUE_GHAENV" ]; then
-                VALUE=$VALUE_GHAENV
-                SOURCE="GitHub Actions environment"
-            else
-                VALUE=$VALUE_OUTPUT
-                SOURCE="Azure environment"
-            fi
-
+            VALUE=$VALUE_OUTPUT
+            SOURCE="Azure environment"            
             if [ "$VAR" == "AZURE_PRINCIPAL_TYPE" ]; then
                 VALUE='ServicePrincipal'
                 SOURCE="Hard-coded"
             fi
-
             # Export the variable to the current environment
             export $VAR=$VALUE
             echo "$VAR: $VALUE (from $SOURCE)"
+            echo "${VAR}=${VALUE}" >> "$GITHUB_OUTPUT"
         done
 
         # Load sample data if needed
