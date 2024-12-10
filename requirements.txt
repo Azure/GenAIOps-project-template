@@ -4,5 +4,5 @@ pandas
 jsonlines
 promptflow.evals
 openpyxl
-openai<=1.44.1 # https://github.com/microsoft/promptflow/issues/3751
+openai # pinning this to 1.44.1 lead to an error during authentication
 azure.mgmt.authorization==4.0.0
