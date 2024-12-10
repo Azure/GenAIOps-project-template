@@ -43,42 +43,6 @@ runs:
       with:
         creds: ${{ inputs.AZURE_CREDENTIALS }}
 
-    - name: Set permissions for service principal 
-      shell: bash
-      run: |
-        echo "Setting permissions for service principal..."
-        AZURE_CREDENTIALS=$(echo '${{ inputs.AZURE_CREDENTIALS }}' | jq -r .)
-        tenantId=$(echo $AZURE_CREDENTIALS | jq -r .tenantId)
-        rg=rg-${{ inputs.AZURE_ENV_NAME }}
-        clientId=$(echo $AZURE_CREDENTIALS | jq -r .clientId)
-        clientSecret=$(echo $AZURE_CREDENTIALS | jq -r .clientSecret) 
-        subscriptionId=${{ inputs.AZURE_SUBSCRIPTION_ID }}
-        principalId=$(az ad sp list --filter "appId eq '$clientId'" --query "[].id" -o tsv)
-        
-        scope="/subscriptions/$subscriptionId/resourceGroups/$rg"
-
-        # Assign roles
-        roles=(
-        '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'  # Storage Blob Data Reader
-        '8311e382-0749-4cb8-b61a-304f252e45ec'  # ACR Push Role
-        '7f951dda-4ed3-4680-a7ca-43fe172d538d'  # ACR Pull Role
-        '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'  # Cognitive Services OpenAI User
-        'f6c7c914-8db3-469d-8ca1-694a8f32e121'  # Data Scientist
-        'ea01e6af-a1c1-4350-9563-ad00f8c72ec5'  # Secrets Reader
-        '8ebe5a00-799e-43f5-93ac-243d3dce84a7'  # Search Index Data Contributor
-        '7ca78c08-252a-4471-8644-bb5ff32d4ba0'  # Search Service Contributor
-        '64702f94-c441-49e6-a78b-ef80e0188fee'  # Azure AI Developer
-        )
-
-        for roleId in "${roles[@]}"; do
-        az role assignment create \
-          --assignee-object-id "$principalId" \
-          --assignee-principal-type "ServicePrincipal" \
-          --role "$roleId" \
-          --scope "$scope"
-        done
-
-
     - name: Login to Azure Developer CLI 
       shell: bash
       run: |
@@ -92,7 +56,7 @@ runs:
     - name: Setup Python 
       uses: actions/setup-python@v5
       with:
-          python-version: 3.8
+          python-version: "3.11"
 
     - name: Provision environment
       shell: bash
@@ -155,10 +119,12 @@ runs:
             deployment_exists=true
           fi
         
+          # this is always a service principal when run from a pipeline
+          azd env set AZURE_PRINCIPAL_TYPE 'ServicePrincipal'
+
           # Checking if previous deployment exists
-          if [  "$deployment_exists" = false ]; then
+          if [ "$deployment_exists" = false ]; then
             echo "Provisioning environment..." 
-            azd env set AZURE_PRINCIPAL_TYPE 'ServicePrincipal'    
             azd provision --no-prompt
           fi
 
@@ -247,7 +213,7 @@ runs:
 
         indexSampleData=$([ -z "$LOAD_AZURE_SEARCH_SAMPLE_DATA" ] || [ "$LOAD_AZURE_SEARCH_SAMPLE_DATA" == "true" ] && echo true || echo false)
         if [ $indexSampleData = "true" ]; then
-          echo "🔶 | Running post-provisioning script to populate sample data." 
+          echo "🔶 | Running post-provisioning script to populate sample data."
           ./infra/hooks/postprovision.sh 
         fi
 
