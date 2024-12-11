@@ -151,7 +151,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: flow-eval-results
-            path: qa_flow_quality_eval.json.json
+            path: qa_flow_quality_eval.json
 
   qa-safety-evaluation:
     needs: setup-env-job    
