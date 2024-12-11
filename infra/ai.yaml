@@ -15,7 +15,7 @@ deployments:
       name: gpt-4o
       version: "2024-05-13"
     sku:
-      name: Standard
+      name: GlobalStandard
       capacity: 20
   - name: text-embedding-ada-002
     model:
