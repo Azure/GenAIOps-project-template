@@ -50,6 +50,7 @@ resource hub 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
     managedNetwork: {
       isolationMode: 'Disabled'
     }
+    systemDatastoresAuthMode: 'identity' // https://learn.microsoft.com/en-us/azure/machine-learning/how-to-disable-local-auth-storage?view=azureml-api-2&tabs=armtemplate#create-a-new-workspace
     v1LegacyMode: false
     publicNetworkAccess: publicNetworkAccess
     discoveryUrl: 'https://${location}.api.azureml.ms/discovery'
